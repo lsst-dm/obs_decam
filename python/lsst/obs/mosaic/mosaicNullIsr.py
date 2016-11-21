@@ -33,7 +33,7 @@ class MosaicNullIsrConfig(pexConfig.Config):
     datasetType = pexConfig.Field(
         dtype=str,
         doc="Dataset type for input data; read by ProcessCcdTask; users will typically leave this alone",
-        default="instcal",
+        default="preprocessed",
     )
 
 ## \addtogroup LSST_task_documentation
@@ -91,7 +91,9 @@ class MosaicNullIsrTask(pipeBase.Task):
         """
         self.log.info("Loading Mosaic community pipeline file %s" % (sensorRef.dataId))
 
-        exposure = sensorRef.get("instcal", immediate=True)
+        exposure = sensorRef.get("preprocessed", immediate=True)
+        import pdb
+        pdb.set_trace()
         if self.config.doWrite:
             sensorRef.put("postISRCCD", exposure)
 

@@ -1,8 +1,10 @@
 Description
 ===========
 
-This obs_decam package is for interfacing DECam with the LSST Data Management
-software.
+The obs_mosaic package is for interfacing data from the Mosaic II Imager
+at KPNO and CTIO with the LSST Data Management. This package is still in very
+preliminary stages, and should not be modified by anyone outside the Deep Lens
+Survey team at UC Davis.
 
 This package is not a part of the official LSST Data Management stack, and is
 hosted by the LSST project only as a courtesy to the astronomical community.
@@ -10,10 +12,14 @@ The LSST does not commit to supporting this package, and makes no warranty
 about its quality or performance.  It is licensed under the GNU Public License
 version 3.
 
-The initial version of this package was provided by Paul Price
-(price@astro.princeton.edu), and though he also makes no commitment to
-support it, users are welcome to contact him and/or the LSST Data Management
-mailing list (lsst-data@lsstcorp.org) with questions.
+This package was created as a fork of the obs_decam package, and still contains
+elements from decam. It will eventually be converted so all the pipeline tasks
+and unit tests will be appropriate to the Mosaic II Imagers. Separate camera
+definitions for the Mosaic cameras at KPNO and CTIO are planned.  Initially,
+we plan to work with the Mosaic II images taken at KPNO for the Deep Lens Survey
+between 1999 and 2005.
+
+Pleas contact (pgee@physics.ucdavis.edu) if you have questions.
 
 
 Copyleft
@@ -35,41 +41,3 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-Use
-===
-
-Documentation of the LSST Science Pipelines is at https://pipelines.lsst.io
-
-1. Create a data repository directory:
-
-        $ mkdir /path/to/repo
-        $ echo lsst.obs.decam.DecamMapper > /path/to/repo/_mapper
-
-2. Get and build obs_decam:
-
-        $ cd /path/to/work
-        $ git clone git://github.com/lsst/obs_decam.git
-        $ cd obs_decam
-        $ setup -t <CURRENT_TAG> -r .
-        $ scons install declare --tag=current
-
-3. Import instcal/dqmask/wtmap data into the data repository:
-
-        $ ingestImagesDecam.py /path/to/repo --mode=link instcal/*.fits.fz
-
-4. Alternatively, import raw and calibration data into the data repository, for example:
-
-        $ ingestImagesDecam.py /path/to/repo --filetype raw /path/to/raw/*.fits.fz
-        $ ingestCalibs.py /path/to/repo/  --calib /path/to/calib/repo/ --calibType defect /path/to/calib/*fits --validity 999
-
-5. Process data:
-
-        $ processCcd.py /path/to/repo/ --id visit=283453 ccdnum=10 --output /path/to/your/output/repo/ -C /path/to/your/config/override/file --config calibrate.doAstrometry=False calibrate.doPhotoCal=False
-
-6. To read instcal files from the community pipeline, replace the ISR task with `DecamNullIsrTask` by using a config override file containing the following:
-
-        from lsst.obs.decam.decamNullIsr import DecamNullIsrTask
-        config.isr.retarget(DecamNullIsrTask)
-
-7. To process raw data with the Community-Pipeline calibration products, retarget the ISR task to `DecamCpIsrTask` by using the config override file config/processCcdCpIsr.py

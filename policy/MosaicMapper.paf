@@ -33,6 +33,15 @@ exposures: {
         tables:        raw
         tables:        raw_skyTile
     }
+    preprocessed: {
+        template:      "preprocessed/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s.fits[%(ccdnum)d]"
+        python:      "lsst.afw.image.ImageF"
+        persistable: "ImageF"
+        storage:    "FitsStorage"
+        level:        "Ccd"
+        tables:        raw
+        tables:        raw_skyTile
+    }
     calexp: {
 
         template:      "calexp/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.calexp.fits"

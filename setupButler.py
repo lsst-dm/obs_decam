@@ -101,7 +101,7 @@ def run():
     setWcs(dataId, repoPath, exp)
     setMask(dataId, repoPath, exp)
     updateVar(exp)
-    butler.put(exp, 'exp', dataId)
+    butler.put(exp, 'postISRCCD', dataId)
     charIm(butler, exp, dataId)
 
 if __name__ == '__main__':

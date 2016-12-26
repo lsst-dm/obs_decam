@@ -23,6 +23,7 @@ from builtins import map
 import os
 import re
 import numpy as np
+import pyfits
 from lsst.utils import getPackageDir
 import lsst.afw.image as afwImage
 import lsst.afw.image.utils as afwImageUtils
@@ -33,7 +34,6 @@ import lsst.pex.policy as pexPolicy
 from .makeMosaicRawVisitInfo import MakeMosaicRawVisitInfo
 
 np.seterr(divide="ignore")
-
 
 class MosaicMapper(CameraMapper):
     packageName = 'obs_mosaic'
@@ -133,225 +133,53 @@ class MosaicMapper(CameraMapper):
     def bypass_deepMergedCoaddId_bits(self, *args, **kwargs):
         return 64 - MosaicMapper._nbit_id
 
-    def translate_dqmask(self, dqmask):
-        # TODO: make a class member variable that knows the mappings
-        # below instead of hard-coding them
-        dqmArr = dqmask.getArray()
-        mask = afwImage.MaskU(dqmask.getDimensions())
-        mArr = mask.getArray()
-        idxBad = np.where(dqmArr & 1)
-        idxSat = np.where(dqmArr & 2)
-        idxIntrp = np.where(dqmArr & 4)
-        idxCr = np.where(dqmArr & 16)
-        idxBleed = np.where(dqmArr & 64)
-        idxEdge = np.where(dqmArr & 512)
-        mArr[idxBad] |= mask.getPlaneBitMask("BAD")
-        mArr[idxSat] |= mask.getPlaneBitMask("SAT")
-        mArr[idxIntrp] |= mask.getPlaneBitMask("INTRP")
-        mArr[idxCr] |= mask.getPlaneBitMask("CR")
-        mArr[idxBleed] |= mask.getPlaneBitMask("SAT")
-        mArr[idxEdge] |= mask.getPlaneBitMask("EDGE")
-        return mask
+    def std_preprocessed(self, item, dataId):
+        """Standardize a preprocess dataset by converting it to an Exposure.
 
-    def translate_wtmap(self, wtmap):
-        wtmArr = wtmap.getArray()
-        idxUndefWeight = np.where(wtmArr <= 0)
-        #Reassign weights to be finite but small:
-        wtmArr[idxUndefWeight] = min(1e-14, np.min(wtmArr[np.where(wtmArr > 0)]))
-        var = 1.0 / wtmArr
-        varim = afwImage.ImageF(var)
-        return varim
-
-    def bypass_instcal(self, datasetType, pythonType, butlerLocation, dataId):
-        # Workaround until I can access the butler
-        instcalMap = self.map_instcal(dataId)
-        dqmaskMap = self.map_dqmask(dataId)
-        wtmapMap = self.map_wtmap(dataId)
-        instcalType = getattr(afwImage, instcalMap.getPythonType().split(".")[-1])
-        dqmaskType = getattr(afwImage, dqmaskMap.getPythonType().split(".")[-1])
-        wtmapType = getattr(afwImage, wtmapMap.getPythonType().split(".")[-1])
-        instcal = instcalType(instcalMap.getLocations()[0])
-        dqmask = dqmaskType(dqmaskMap.getLocations()[0])
-        wtmap = wtmapType(wtmapMap.getLocations()[0])
-
-        mask = self.translate_dqmask(dqmask)
-        variance = self.translate_wtmap(wtmap)
-
-        mi = afwImage.MaskedImageF(afwImage.ImageF(instcal.getImage()), mask, variance)
-        md = instcal.getMetadata()
-        wcs = afwImage.makeWcs(md)
-        exp = afwImage.ExposureF(mi, wcs)
-
-        # Set the calib by hand; need to grab the zeroth extension
-        header = re.sub(r'[\[](\d+)[\]]$', "[0]", instcalMap.getLocations()[0])
-        md0 = afwImage.readMetadata(header)
-        calib = afwImage.Calib()
-        calib.setFluxMag0(10**(0.4 * md0.get("MAGZERO")))
-        exp.setCalib(calib)
-        exposureId = self._computeCcdExposureId(dataId)
-        visitInfo = self.makeRawVisitInfo(md=md0, exposureId=exposureId)
-        exp.getInfo().setVisitInfo(visitInfo)
-
-        afwImage.stripWcsKeywords(md, wcs)
-
-        for kw in ('LTV1', 'LTV2'):
-            md.remove(kw)
-
-        # Remove TPV keywords from the metadata
-        for kw in md.paramNames():
-            if re.match(r'PV\d_\d', kw):
-                md.remove(kw)
-
-        exp.setMetadata(md)
-        return exp
-
-    def std_raw(self, item, dataId):
-        """Standardize a raw dataset by converting it to an Exposure.
-
-        Raw images are MEF files with one HDU for each detector.
-        Header keywords EXPTIME and MJD-OBS exist only in the zeroth
-        extension and are copied to metadata.
+        Preprocessed images are MEF files with one HDU for each detector.
+        Header keyword MJD-OBS exist only in the zeroth
+        extension and is copied to metadata.
 
         @param item: The image read by the butler
         @param dataId: Data identifier
         @return (lsst.afw.image.Exposure) the standardized Exposure
         """
         # Convert the raw DecoratedImage to an Exposure, set metadata and wcs.
+        md = item.getMetadata()
+
+        # Convert wcs to a TAN by removing the higher order corrections which
+        # were put by the DLS pipeline into the image Wcs.  The Wcs which results
+        # is now only approximate
+        md.set('CTYPE1', 'RA---TAN')
+        md.set('CTYPE2', 'DEC--TAN')
+        for kw in md.paramNames():
+            if kw.startswith('WAT1') or kw.startswith('WAT2'):
+                md.remove(kw)
         exp = exposureFromImage(item)
-        md = exp.getMetadata()
-        rawPath = self.map_raw(dataId).getLocations()[0]
-        headerPath = re.sub(r'[\[](\d+)[\]]$', "[0]", rawPath)
-        md0 = afwImage.readMetadata(headerPath)
-        # extra keywords to copy to the exposure
-        for kw in ('DARKTIME', ):
-            if kw in md0.paramNames() and kw not in md.paramNames():
-                md.add(kw, md0.get(kw))
+
+        #   convert the hdu0 header to visitInfo using pyfits to read it
+        rawPath = self.map_preprocessed(dataId).getLocations()[0]
+        headerPath = re.sub(r'[\[](\d+)[\]]$', "", rawPath)
+        header = pyfits.open(headerPath)[0].header
+        #  We don't actually use all of thes values in the header, but put this
+        #  list here for later reference
+        md0 = type(md)()
+        extractKeys = ('DATE', 'FILENAME', 'EXPTIME', 'DARKTIME', 'RA', 'DEC', 'DATE-OBS',
+                       'TIME-OBS', 'MJD-OBS', 'OBSERVAT', 'TELESCOP', 'TELRADEC', 'TELRA',
+                       'TELDEC', 'ZD', 'AIRMASS', 'DETECTOR', 'FILTER', 'READTIME', 'OBSID')
+        for key in extractKeys:
+            if key in header.keys():
+                md0.add(key, header[key])
+        #   TIMESYS is utc approximate in the header, so we need to replace it
+        md0.add('TIMESYS', 'utc')
         exposureId = self._computeCcdExposureId(dataId)
         visitInfo = self.makeRawVisitInfo(md=md0, exposureId=exposureId)
         exp.getInfo().setVisitInfo(visitInfo)
-        # As TPV is not supported yet, the wcs keywords are not pruned
-        # from the metadata. Once TPV is supported, the following keyword
-        # removal may not be necessary here and would probably be done at
-        # makeWcs() when the raw image is converted to an Exposure.
-        afwImage.stripWcsKeywords(md, exp.getWcs())
-        for kw in ('LTV1', 'LTV2'):
-            md.remove(kw)
-
-        # Currently the existence of some PV cards in the metadata combined
-        # with a CTYPE of TAN is interpreted as TPV (DM-2883).
-        for kw in md.paramNames():
-            if re.match(r'PV\d_\d', kw):
-                md.remove(kw)
-        # Standardize an Exposure, including setting the calib object
-        return self._standardizeExposure(self.exposures['raw'], exp, dataId,
-                                         trimmed=False)
-
-    def std_dark(self, item, dataId):
-        exp = afwImage.makeExposure(afwImage.makeMaskedImage(item))
-        rawPath = self.map_raw(dataId).getLocations()[0]
-        headerPath = re.sub(r'[\[](\d+)[\]]$', "[0]", rawPath)
-        md0 = afwImage.readMetadata(headerPath)
-        visitInfo = self.makeRawVisitInfo(md0)
-        exp.getInfo().setVisitInfo(visitInfo)
-        return self._standardizeExposure(self.calibrations["dark"], exp, dataId, filter=False)
-
-    def std_bias(self, item, dataId):
-        exp = afwImage.makeExposure(afwImage.makeMaskedImage(item))
-        return self._standardizeExposure(self.calibrations["bias"], exp, dataId, filter=False)
-
-    def std_flat(self, item, dataId):
-        exp = afwImage.makeExposure(afwImage.makeMaskedImage(item))
-        return self._standardizeExposure(self.calibrations["flat"], exp, dataId, filter=True)
-
-    def _standardizeCpMasterCal(self, datasetType, item, dataId, setFilter=False):
-        """Standardize a MasterCal image obtained from NOAO archive into Exposure
-
-        These MasterCal images are MEF files with one HDU for each detector.
-        Some WCS header, eg CTYPE1, exists only in the zeroth extensionr,
-        so info in the zeroth header need to be copied over to metadata.
-
-        @param datasetType: Dataset type ("bias" or "flat")
-        @param item: The image read by the butler
-        @param dataId: Data identifier
-        @param setFilter: Whether to set the filter in the Exposure
-        @return (lsst.afw.image.Exposure) the standardized Exposure
-        """
-        mi = afwImage.makeMaskedImage(item.getImage())
-        md = item.getMetadata()
-        masterCalMap = getattr(self, "map_" + datasetType)
-        masterCalPath = masterCalMap(dataId).getLocations()[0]
-        headerPath = re.sub(r'[\[](\d+)[\]]$', "[0]", masterCalPath)
-        md0 = afwImage.readMetadata(headerPath)
-        for kw in ('CTYPE1', 'CTYPE2', 'CRVAL1', 'CRVAL2', 'CUNIT1', 'CUNIT2',
-                   'CD1_1', 'CD1_2', 'CD2_1', 'CD2_2'):
-            if kw in md0.paramNames() and kw not in md.paramNames():
+        # Keywords EXPTIME and MJD-OBS are used to set the calib object.
+        for kw in ('MJD-OBS', 'EXPTIME', 'OBSERVAT'):
+            if kw in md0.paramNames():
                 md.add(kw, md0.get(kw))
-        wcs = afwImage.makeWcs(md, True)
-        exp = afwImage.makeExposure(mi, wcs)
-        exp.setMetadata(md)
-        return self._standardizeExposure(self.calibrations[datasetType], exp, dataId, filter=setFilter)
-
-    def std_cpBias(self, item, dataId):
-        return self._standardizeCpMasterCal("cpBias", item, dataId, setFilter=False)
-
-    def std_cpFlat(self, item, dataId):
-        return self._standardizeCpMasterCal("cpFlat", item, dataId, setFilter=True)
-
-    def std_fringe(self, item, dataId):
-        exp = afwImage.makeExposure(afwImage.makeMaskedImage(item))
-        return self._standardizeExposure(self.calibrations["fringe"], exp, dataId)
-
-    def map_defects(self, dataId, write=False):
-        """Map defects dataset with the calibration registry.
-
-        Overriding the method so to use CalibrationMapping policy,
-        instead of looking up the path in defectRegistry as currently
-        implemented in CameraMapper.
-
-        @param dataId (dict) Dataset identifier
-        @return daf.persistence.ButlerLocation
-        """
-        return self.mappings["defects"].map(self, dataId=dataId, write=write)
-
-    def bypass_defects(self, datasetType, pythonType, butlerLocation, dataId):
-        """Return a defect list based on butlerLocation returned by map_defects.
-
-        Use all nonzero pixels in the Community Pipeline Bad Pixel Masks.
-
-        @param[in] butlerLocation: Butler Location with path to defects FITS
-        @param[in] dataId: data identifier
-        @return meas.algorithms.DefectListT
-        """
-        bpmFitsPath = butlerLocation.locationList[0]
-        bpmImg = afwImage.ImageU(bpmFitsPath)
-        idxBad = np.nonzero(bpmImg.getArray())
-        mim = afwImage.MaskedImageU(bpmImg.getDimensions())
-        mim.getMask().getArray()[idxBad] |= mim.getMask().getPlaneBitMask("BAD")
-        return isr.getDefectListFromMask(mim, "BAD", growFootprints=0)
-
-    def std_defects(self, item, dataId):
-        """Return the defect list as it is.
-
-        Do not standardize it to Exposure.
-        """
-        return item
-
-    @classmethod
-    def getLinearizerDir(cls):
-        """Directory containing linearizers"""
-        packageName = cls.getPackageName()
-        packageDir = getPackageDir(packageName)
-        return os.path.join(packageDir, "mosaic", "linearizer")
-
-    def map_linearizer(self, dataId, write=False):
-        """Map a linearizer"""
-        actualId = self._transformId(dataId)
-        location = os.path.join(self.getLinearizerDir(), "%02d.fits" % (dataId["ccdnum"]),)
-        return ButlerLocation(
-            pythonType="lsst.ip.isr.LinearizeSquared",
-            cppType="Config",
-            storageName="PickleStorage",
-            locationList=[location],
-            dataId=actualId,
-            mapper=self,
-        )
+        # Standardize an Exposure, including setting the calib object
+        result = self._standardizeExposure(self.exposures['preprocessed'], exp, dataId,
+                                         trimmed=False)
+        return result

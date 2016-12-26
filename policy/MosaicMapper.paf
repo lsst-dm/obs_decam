@@ -29,15 +29,6 @@ exposures: {
         template:      "calexp/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.calexp.fits"
         tables:        raw
     }
-    postISRMosaic: {
-        template:      "mosaic/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s.fits#%(hdu)d"
-        python:        "lsst.afw.image.ImageF"
-        persistable:   "ImageF"
-        storage:    "FitsStorage"
-        level:        "Ccd"
-        tables:        raw
-        tables:        raw_skyTile
-    }
     raw: {
         template:    "%(date)s/%(filter)s/decam%(visit)07d.fits.fz[%(hdu)d]"
         python:      "lsst.afw.image.DecoratedImageF"
@@ -46,38 +37,16 @@ exposures: {
         columns:     "ccdnum"
         columns:     "ccd"
     }
-    postISRCCD: {
-        template:      "postISRCCD/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.exp.fits"
-    }
-    instcal: {
-        template:    "%(visit)07d/instcal%(visit)07d.fits.fz[%(ccdnum)d]"
+    preprocessed: {
+        template:      "preprocessed/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s.fits[%(ccdnum)d]"
         python:      "lsst.afw.image.DecoratedImageF"
         persistable: "DecoratedImageF"
-        storage:     "FitsStorage"
-        level:       "ccd"
-        tables:      "raw"
-        columns:     "visit"
-        columns:     "ccdnum"
+        storage:    "FitsStorage"
+        level:        "Ccd"
+        tables:        raw
     }
-    dqmask: {
-        template:    "%(visit)07d/dqmask%(visit)07d.fits.fz[%(ccdnum)d]"
-        python:      "lsst.afw.image.ImageU"
-        persistable: "ImageU"
-        storage:     "FitsStorage"
-        level:       "ccd"
-        tables:      "raw"
-        columns:     "visit"
-        columns:     "ccdnum"
-    }
-    wtmap: {
-        template:    "%(visit)07d/wtmap%(visit)07d.fits.fz[%(ccdnum)d]"
-        python:      "lsst.afw.image.ImageF"
-        persistable: "ImageF"
-        storage:     "FitsStorage"
-        level:       "ccd"
-        tables:      "raw"
-        columns:     "visit"
-        columns:     "ccdnum"
+    postISRCCD: {
+        template:      "postISRCCD/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.fits"
     }
     icExp: {
         template:    "%(dateObs)s/icExp/%(objname)s_%(ccdnum)d.fits"
@@ -152,35 +121,6 @@ calibrations: {
         filter:      true
         validRange:  false
     }
-    cpBias: {
-        # Given that MasterCal hdu number is identical to ccdnum
-        template:    "%(path)s[%(ccdnum)d]"
-        python:      "lsst.afw.image.DecoratedImageF"
-        persistable: "DecoratedImageF"
-        storage:     "FitsStorage"
-        level:       "ccd"
-        tables:      "bias"
-        columns:     "date"
-        reference:   "raw_visit"
-        refCols:     "visit"
-        filter:      false
-        validRange:  true
-        obsTimeName: date
-    }
-    cpFlat: {
-        template:    "%(path)s[%(ccdnum)d]"
-        python:      "lsst.afw.image.DecoratedImageF"
-        persistable: "DecoratedImageF"
-        storage:     "FitsStorage"
-        level:       "ccd"
-        tables:      "flat"
-        columns:     "filter" "date"
-        reference:   "raw_visit"
-        refCols:     "visit"
-        filter:      true
-        validRange:  true
-        obsTimeName: date
-    }
     defects: {
         template:    "%(path)s"
         python:      "lsst.afw.image.ImageU"
@@ -211,14 +151,6 @@ datasets: {
         template:      "preprocessed/masks/%(observatory)s/%(year)s/bpm_%(ccdnum)d.fits"
         python:        "lsst.afw.image.ImageU"
         persistable:   "ImageU"
-        storage:    "FitsStorage"
-        level:        "Ccd"
-        tables:        raw
-    }
-    preprocessed: {
-        template:      "preprocessed/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s.fits[%(ccdnum)d]"
-        python:      "lsst.afw.image.DecoratedImageF"
-        persistable: "DecoratedImageF"
         storage:    "FitsStorage"
         level:        "Ccd"
         tables:        raw

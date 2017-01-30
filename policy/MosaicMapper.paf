@@ -25,8 +25,7 @@ camera: "../mosaic/camGeom"
 
 exposures: {
     calexp: {
-
-        template:      "calexp/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.calexp.fits"
+        template:      "calexp/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.fits"
         tables:        raw
     }
     raw: {
@@ -49,7 +48,7 @@ exposures: {
         template:      "postISRCCD/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.fits"
     }
     icExp: {
-        template:    "%(dateObs)s/icExp/%(objname)s_%(ccdnum)d.fits"
+        template:    "icExp/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.fits"
         columns:     "ccdnum"
         columns:     "objname"
         columns:     "dateObs"
@@ -156,13 +155,13 @@ datasets: {
         tables:        raw
     }
     icSrc: {
-        template:    "%(dateObs)s/icSrc/%(objname)s_%(ccdnum)d.fits"
+        template:    "icSrc/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.fits"
     }
     src: {
-        template:      "%(visit)07d/src/src-%(visit)07d_%(ccdnum)02d.fits"
+        template:    "src/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.fits"
     }
     icMatch: {
-        template:      "%(visit)07d/icMatch/icMatch-%(visit)07d_%(ccdnum)02d.fits"
+        template:    "icMatch/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.fits"
         python:        "lsst.afw.table.BaseCatalog"
         persistable:   "BaseCatalog"
         storage:       "FitsCatalogStorage"
@@ -170,28 +169,29 @@ datasets: {
         tables:        raw_skyTile
     }
     srcMatch: {
-        template:      "%(visit)07d/srcMatch/srcMatch-%(visit)07d_%(ccdnum)02d.fits"
+        template:    "srcMatch/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.fits"
     }
     icExpBackground: {
-        template:      "%(dateObs)s/icExp/icExpBackground-%(objname)s_%(ccdnum)02d.fits"
+        template:    "icExp/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.bkgrd.fits"
     }
     calexpBackground: {
-        template:      "%(visit)07d/bkgd/bkgd-%(visit)07d_%(ccdnum)02d.fits"
+        template:      "calexp/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.bkgrd.fits"
+
     }
     processCcd_metadata: {
-        template:      "%(visit)07d/metadata/metadata-%(visit)07d_%(ccdnum)02d.boost"
+        template:      "metadata/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/processCcd_%(objname)s_%(ccdnum)d.boost"
     }
     isr_config: {
         python:        "lsst.obs.decam.isr.DecamIsrConfig"
     }
     isr_metadata: {
-        template:      "%(visit)07d/metadata/metadata-%(visit)07d_%(ccdnum)02d.boost"
+        template:      "metadata/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/isr_%(objname)s_%(ccdnum)d.boost"
     }
     characterizeImage_metadata: {
-        template:      "%(visit)07d/metadata/metadata-%(visit)07d_%(ccdnum)02d.boost"
+        template:      "metadata/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/characterizeImage_%(objname)s_%(ccdnum)d.boost"
     }
     calibrate_metadata: {
-        template:      "%(visit)07d/metadata/metadata-%(visit)07d_%(ccdnum)02d.boost"
+        template:      "metadata/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/calibrate_%(objname)s_%(ccdnum)d.boost"
     }
     deep_makeCoaddTempExp_metadata: {
         template:      "deepCoadd/%(filter)s/%(tract)d/%(patch)s/makeCoaddTempExpMD.boost"

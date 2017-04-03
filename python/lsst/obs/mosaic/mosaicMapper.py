@@ -158,8 +158,8 @@ class MosaicMapper(CameraMapper):
         exp = exposureFromImage(item)
 
         #   convert the hdu0 header to visitInfo using pyfits to read it
-        rawPath = self.map_preprocessed(dataId).getLocations()[0]
-        headerPath = re.sub(r'[\[](\d+)[\]]$', "", rawPath)
+        path = self.map_preprocessed(dataId).getLocationsWithRoot()[0]
+        headerPath = re.sub(r'[\[](\d+)[\]]$', "", path)
         header = pyfits.open(headerPath)[0].header
         #  We don't actually use all of thes values in the header, but put this
         #  list here for later reference

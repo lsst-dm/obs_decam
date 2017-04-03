@@ -26,7 +26,7 @@ import lsst.afw.image
 import lsst.pipe.base as pipeBase
 import lsst.pex.config as pexConfig
 from lsst.pipe.tasks.characterizeImage import CharacterizeImageTask
-from lsst.ip.isr.isr import updateVariance, makeThresholdMask, maskPixelsFromDefectList
+from lsst.ip.isr.isrFunctions import updateVariance, makeThresholdMask, maskPixelsFromDefectList
 
 #  Use the header from the preprocessed mosaic image to set the wcs of the exposure.
 #  The wcs is centered on the central pixel, using the coordinate

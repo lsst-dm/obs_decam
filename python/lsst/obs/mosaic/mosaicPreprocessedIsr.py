@@ -26,7 +26,7 @@ import lsst.afw.image
 import lsst.pipe.base as pipeBase
 import lsst.pex.config as pexConfig
 from lsst.pipe.tasks.characterizeImage import CharacterizeImageTask
-from lsst.ip.isr.isr import updateVariance, makeThresholdMask, maskPixelsFromDefectList
+from lsst.ip.isr.isrFunctions import updateVariance, makeThresholdMask, maskPixelsFromDefectList
 
 #  Use the header from the preprocessed mosaic image to set the wcs of the exposure.
 #  The wcs is centered on the central pixel, using the coordinate
@@ -59,7 +59,8 @@ def setMask(butler, dataId, exp):
     mask = mi.getMask()
     #   First set the saturated pixels with the SAT bit
     satbitm = mask.getPlaneBitMask('SAT')
-    satmask = (exp.getMaskedImage().getImage().getArray() >= 20000)
+    satlevel = exp.getDetector()[0].getSaturation()
+    satmask = (exp.getMaskedImage().getImage().getArray() >= 25000)
     maskarray = mask.getArray()
     mask.getArray()[satmask] |= satbitm
 
@@ -78,7 +79,7 @@ def setMask(butler, dataId, exp):
          dataId2['filter'], dataId2['dateObs'], dataId2['objname'], dataId2['ccdnum'])
     if butler.datasetExists('masked', dataId2):
         regimg = butler.get('masked', dataId2)
-        badbitm = mask.getPlaneBitMask('SUSPECT')
+        badbitm = mask.getPlaneBitMask('BAD')
         badmask = (regimg.getArray() < 1)
         mask.getArray()[badmask] |= badbitm
 
@@ -154,7 +155,6 @@ class MosaicPreprocessedIsrTask(pipeBase.Task):
         - exposure: exposure after application of ISR: the "instcal" exposure, unchanged
         """
         self.log.info("Loading Mosaic community pipeline file %s" % (sensorRef.dataId))
-
         butler = sensorRef.getButler()
         dataId = sensorRef.dataId
         exp = butler.get('preprocessed', dataId)

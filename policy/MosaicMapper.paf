@@ -28,14 +28,14 @@ exposures: {
         template:      "calexp/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.fits"
         tables:        raw
     }
-    # this dataset is not used, but it is useful to have its keys
     raw: {
-        template:    "raw/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(visit)d/%(objname)s.fits[%(ccdnum)d]"
+        template:    "%(date)s/%(filter)s/decam%(visit)07d.fits.fz[%(hdu)d]"
         python:      "lsst.afw.image.DecoratedImageF"
         persistable: "DecoratedImageF"
-        tables:        raw
+        columns:     "visit"
+        columns:     "ccdnum"
+        columns:     "ccd"
     }
-
     preprocessed: {
         template:      "preprocessed/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s.fits[%(ccdnum)d]"
         python:      "lsst.afw.image.DecoratedImageF"
@@ -61,21 +61,6 @@ exposures: {
     }
     deepDiff_matchedExp: {
         template:      "deepDiff/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(tract)d/%(patch)stempExp/%(objname)s_%(ccdnum)d.fits"
-    }
-
-    # For jointcal
-    wcs: {
-        template: "jointcal-results/%(tract)04d/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/wcs-(objname)s_%(ccdnum)d.fits"
-    }
-
-    fcr: {
-        template: "jointcal-results/%(tract)04d/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/fcr-(objname)s_%(ccdnum)d.fits"
-        python:        "lsst.afw.image.ExposureI"
-        persistable:        "ExposureI"
-        storage:    "FitsStorage"
-        level:        "Ccd"
-        tables:        "raw"
-        tables:        "raw_visit"
     }
 }
 
@@ -154,7 +139,7 @@ calibrations: {
 datasets: {
 
     masked: {
-        template:      "preprocessed/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.bpm.fits"
+        template:      "masks/manual/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.bpm.fits"
         python:        "lsst.afw.image.ImageU"
         persistable:   "ImageU"
         storage:    "FitsStorage"
@@ -162,7 +147,7 @@ datasets: {
         tables:        raw
     }
     bpm: {
-        template:      "preprocessed/masks/%(observatory)s/%(year)s/bpm_%(ccdnum)d.fits"
+        template:      "masks/%(observatory)s/%(year)s/bpm_%(ccdnum)d.fits"
         python:        "lsst.afw.image.ImageU"
         persistable:   "ImageU"
         storage:    "FitsStorage"
@@ -217,8 +202,20 @@ datasets: {
     deep_safeClipAssembleCoadd_metadata: {
         template:      "deepCoadd/%(filter)s/%(tract)d/%(patch)s/assembleCoaddMD.boost"
     }
-    deepCoadd_srcMatch: {
+    deepCoadd_measMatch: {
         template:      "deepCoadd-results/%(filter)s/%(tract)d/%(patch)s/srcMatch-%(filter)s-%(tract)d-%(patch)s.fits"
+    }
+    deepCoadd_measMatchFull: {
+        template:      "deepCoadd-results/%(filter)s/%(tract)d/%(patch)s/srcMatchFull-%(filter)s-%(tract)d-%(patch)s.fits"
+    }
+    # Detections on coadds
+    deepCoadd_det: {
+        template:      "deepCoadd-results/%(filter)s/%(tract)d/%(patch)s/det-%(filter)s-%(tract)d-%(patch)s.fits"
+        python:        "lsst.afw.table.SourceCatalog"
+        persistable:   "ignored"
+        storage:       "FitsCatalogStorage"
+        tables:        raw
+        tables:        raw_skyTile
     }
     detectCoaddSources_config: {
         template:      "config/detectCoadd.py"

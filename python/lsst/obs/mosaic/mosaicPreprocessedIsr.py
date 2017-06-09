@@ -26,7 +26,7 @@ import lsst.afw.image
 import lsst.pipe.base as pipeBase
 import lsst.pex.config as pexConfig
 from lsst.pipe.tasks.characterizeImage import CharacterizeImageTask
-from lsst.ip.isr.isrFunctions import updateVariance, makeThresholdMask, maskPixelsFromDefectList
+from lsst.ip.isr.isrFunctions import updateVariance, makeThresholdMask, maskPixelsFromDefectList, interpolateFromMask
 
 #  Use the header from the preprocessed mosaic image to set the wcs of the exposure.
 #  The wcs is centered on the central pixel, using the coordinate
@@ -65,22 +65,20 @@ def setMask(butler, dataId, exp):
     mask.getArray()[satmask] |= satbitm
 
     #   First get the bpm for that date, ccd, and telescope
-    dataId2 = dict(dataId)
-    dataId2['observatory'] = exp.getMetadata().get('OBSERVAT').lower()
-    dataId2['year'] = dataId2['dateObs'][0:4]
-    if butler.datasetExists('bpm', dataId2):
-        img = butler.get('bpm', dataId2)
+    dI2 = dict(dataId)
+    dI2['observatory'] = exp.getMetadata().get('OBSERVAT').lower()
+    dI2['year'] = dI2['dateObs'][0:4]
+    if butler.datasetExists('bpm', dI2):
+        img = butler.get('bpm', dI2)
         badbitm = mask.getPlaneBitMask('BAD')
-        badmask = (img.getArray() < 1)
+        badmask = (img.getArray() == 0)
         mask.getArray()[badmask] |= badbitm
 
     #    Next get the exclusion regions for each exposure, mark as "SUSPECT"
-    regpath = "/home/DLS/masks/%s/%s/%s/%s/%s_%d.bpm.fits.fz"%(dataId2['field'], dataId2['subfield'],
-         dataId2['filter'], dataId2['dateObs'], dataId2['objname'], dataId2['ccdnum'])
-    if butler.datasetExists('masked', dataId2):
-        regimg = butler.get('masked', dataId2)
-        badbitm = mask.getPlaneBitMask('BAD')
-        badmask = (regimg.getArray() < 1)
+    if butler.datasetExists('masked', dI2):
+        regimg = butler.get('masked', dI2)
+        badbitm = mask.getPlaneBitMask('SUSPECT')
+        badmask = (regimg.getArray() == 0)
         mask.getArray()[badmask] |= badbitm
 
 def updateVar(exp, metadata):
@@ -161,10 +159,11 @@ class MosaicPreprocessedIsrTask(pipeBase.Task):
 
         #   Use the butler to fetch info needed to use the DLS bpm and masked region files
         setMask(butler, dataId, exp)
-
+        interpolateFromMask(exp.getMaskedImage(), 1.0,  growFootprints=1, maskName='BAD')
         #   Update the variance plane using the image prior to background subtraction
         updateVar(exp, exp.getMetadata())
 
+        interpolateFromMask(exp.getMaskedImage(), 1.0,  growFootprints=1, maskName='SAT')
         if self.config.doWrite:
             sensorRef.put(exp, "postISRCCD")
 

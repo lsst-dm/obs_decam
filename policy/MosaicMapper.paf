@@ -35,6 +35,9 @@ exposures: {
         template: "deepCoadd/%(filter)s/%(tract)d/%(patch)s_nImage.fits"
         level: "Skytile"
     }
+    wcs: {
+        template: "jointcal-results/%(tract)04d/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.wcs.fits"
+    }
     raw: {
         template:    "%(date)s/%(filter)s/decam%(visit)07d.fits.fz[%(hdu)d]"
         python:      "lsst.afw.image.DecoratedImageF"
@@ -146,7 +149,7 @@ calibrations: {
 datasets: {
 
     masked: {
-        template:      "masks/manual/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.bpm.fits"
+        template:      "masks/manual/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.bpm.fits.fz"
         python:        "lsst.afw.image.ImageU"
         persistable:   "ImageU"
         storage:    "FitsStorage"

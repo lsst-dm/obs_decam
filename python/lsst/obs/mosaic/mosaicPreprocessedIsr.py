@@ -59,8 +59,8 @@ def setMask(butler, dataId, exp):
     mask = mi.getMask()
     #   First set the saturated pixels with the SAT bit
     satbitm = mask.getPlaneBitMask('SAT')
-    satlevel = exp.getDetector()[0].getSaturation()
-    satmask = (exp.getMaskedImage().getImage().getArray() >= 25000)
+    satlevel = exp.getDetector()[0].getSaturation() * .80
+    satmask = (exp.getMaskedImage().getImage().getArray() >= satlevel)
     maskarray = mask.getArray()
     mask.getArray()[satmask] |= satbitm
 
@@ -163,7 +163,7 @@ class MosaicPreprocessedIsrTask(pipeBase.Task):
         #   Update the variance plane using the image prior to background subtraction
         updateVar(exp, exp.getMetadata())
 
-        interpolateFromMask(exp.getMaskedImage(), 1.0,  growFootprints=1, maskName='SAT')
+        #interpolateFromMask(exp.getMaskedImage(), 1.0,  growFootprints=1, maskName='SAT')
         if self.config.doWrite:
             sensorRef.put(exp, "postISRCCD")
 

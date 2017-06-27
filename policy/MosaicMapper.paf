@@ -35,6 +35,9 @@ exposures: {
         template: "deepCoadd/%(filter)s/%(tract)d/%(patch)s_nImage.fits"
         level: "Skytile"
     }
+    deepCoadd_directWarp: {
+        template:    "deepCoadd/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(tract)d/%(patch)sdirectWarp/%(objname)s_%(ccdnum)d.fits"
+    }
     wcs: {
         template: "jointcal-results/%(tract)04d/%(field)s/%(subfield)s/%(filter)s/%(dateObs)s/%(objname)s_%(ccdnum)d.wcs.fits"
     }

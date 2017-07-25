@@ -42,10 +42,16 @@ class MakeMosaicRawVisitInfo(MakeRawVisitInfo):
         """
         MakeRawVisitInfo.setArgDict(self, md, argDict)
         argDict["darkTime"] = self.popFloat(md, "DARKTIME")
-        argDict["boresightRaDec"] = IcrsCoord(
-            self.popAngle(md, "TELRA", units=astropy.units.h),
-            self.popAngle(md, "TELDEC"),
-        )
+        if "TELRA" in md.getOrderedNames():
+            argDict["boresightRaDec"] = IcrsCoord(
+                self.popAngle(md, "TELRA", units=astropy.units.h),
+                self.popAngle(md, "TELDEC"),
+            )
+        else:
+            argDict["boresightRaDec"] = IcrsCoord(
+                self.popAngle(md, "RA", units=astropy.units.h),
+                self.popAngle(md, "DEC"),
+            )
         argDict["boresightAirmass"] = self.popFloat(md, "AIRMASS")
 
     def getDateAvg(self, md, exposureTime):

@@ -68,7 +68,7 @@ def setMask(butler, dataId, exp):
 
     #   First get the bpm for that date, ccd, and telescope
     dI2 = dict(dataId)
-    dI2['observatory'] = exp.getMetadata().get('OBSERVAT').lower()
+    dI2['observatory'] = exp.getMetadata().get('OBSERVAT')[0].lower()
     dI2['year'] = dI2['dateObs'][0:4]
     if butler.datasetExists('bpm', dI2):
         img = butler.get('bpm', dI2)
